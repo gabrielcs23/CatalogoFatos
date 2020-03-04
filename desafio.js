@@ -48,12 +48,38 @@ var schema = [
 // Ou seja, quais são as informações que estão valendo no momento atual.
 // A função deve receber `facts` (todos fatos conhecidos) e `schema` como argumentos.
 
-// Resultado esperado para este exemplo (mas não precisa ser nessa ordem):
-[
-  ['gabriel', 'endereço', 'av rio branco, 109', true],
-  ['joão', 'endereço', 'rua bob, 88', true],
-  ['joão', 'telefone', '91234-5555', true],
-  ['gabriel', 'telefone', '98888-1111', true],
-  ['gabriel', 'telefone', '56789-1010', true]
-];
-```
+// ------------------------------------------------------------------------------------------------------------------------------------------------------ //
+
+
+// Pré processamento dos fatos. Aqui a matriz vira um array de objetos para simplificar o acesso aos campos.
+function getFactsAsObjectsArray(facts) {
+  var objArray = [];
+  facts.forEach(
+    (fact) => objArray.push(
+      {entidade: fact[0], atributo: fact[1], valor: fact[2], added: fact[3]}
+    )
+  );
+  return objArray;
+}
+
+// Pré processamento dos fatos. Aqui a matriz vira um array de objetos para simplificar o acesso aos campos.
+// A princípio schema apenas contém informação de cardinalidade, por isso schema[1] for desconsiderado
+function getSchemaAsObjectArray(schema) {
+  var objArray = [];
+  schema.forEach(
+    (entry) => objArray.push(
+      {atributo: entry[0], cardinalidade: entry[2]}
+    )
+  );
+  return objArray;
+}
+
+function getFatosVigentes(facts, schema) {
+  facts = getFactsAsObjectsArray(facts);
+  schema = getSchemaAsObjectArray(schema);
+
+  console.log(facts);
+  console.log(schema);
+}
+
+getFatosVigentes(facts, schema);
