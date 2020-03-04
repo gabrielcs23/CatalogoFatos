@@ -48,7 +48,17 @@ var schema = [
 // Ou seja, quais são as informações que estão valendo no momento atual.
 // A função deve receber `facts` (todos fatos conhecidos) e `schema` como argumentos.
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------------ //
+// Resultado esperado para este exemplo (mas não precisa ser nessa ordem):
+/* 
+[
+  ['gabriel', 'endereço', 'av rio branco, 109', true],
+  ['joão', 'endereço', 'rua bob, 88', true],
+  ['joão', 'telefone', '91234-5555', true],
+  ['gabriel', 'telefone', '98888-1111', true],
+  ['gabriel', 'telefone', '56789-1010', true]
+];
+ */
+// -------------------------------------------------------------------------------------------------------------- //
 
 
 // Pré processamento dos fatos. Aqui a matriz vira um array de objetos para simplificar o acesso aos campos.
@@ -63,7 +73,7 @@ function getFactsAsObjectsArray(facts) {
 }
 
 // Pré processamento dos fatos. Aqui a matriz vira um array de objetos para simplificar o acesso aos campos.
-// A princípio schema apenas contém informação de cardinalidade, por isso schema[1] for desconsiderado
+// A princípio schema apenas contém informação de cardinalidade, por isso schema[1] foi desconsiderado
 function getSchemaAsObjectArray(schema) {
   var objArray = [];
   schema.forEach(
@@ -74,12 +84,63 @@ function getSchemaAsObjectArray(schema) {
   return objArray;
 }
 
+// Como a ordem de resposta não importa, os registros serão armazenados no Map mapaEntidades onde cada chave representa uma entidade do catálogo.
+// Cada valor de mapaEntidades será um novo mapa (chamado de mapaAtr) onde o par [chave:valor] será dado por [atributo:fato], onde fato é uma tupla.
+/* e.g. 
+  Map {                                                                       //mapaEntidades
+    'gabriel' => Map {                                                        //mapaAtr
+      'endereço' => [ ['gabriel', 'endereço', 'av rio branco, 109', true] ]   //fato
+    },
+    'joão' => Map {                                                           //mapaAtr
+      'endereço' => [ ['joão', 'endereço', 'rua bob, 88', true] ]             //fato
+      'telefone' => [ 
+        ['joão', 'telefone', '234-5678', true],                               //fato
+        ['joão', 'telefone', '91234-5555', true]                              //fato
+      ]
+    }
+  }
+*/
+
 function getFatosVigentes(facts, schema) {
   facts = getFactsAsObjectsArray(facts);
   schema = getSchemaAsObjectArray(schema);
 
-  console.log(facts);
-  console.log(schema);
+  if (facts.length > 0 && schema.length > 0) {
+    var mapaEntidades = new Map();
+    facts.forEach(
+      (fact) => {
+        if (mapaEntidades.has(fact.entidade)) {
+          mapaAtr = mapaEntidades.get(fact.entidade)
+          var atrSchema = schema.find(
+            (entry) => entry.atributo === fact.atributo
+          );
+          if (mapaAtr.has(fact.atributo) && atrSchema.cardinalidade === 'many') {
+            mapaAtr.get(fact.atributo).push(Object.values(fact)); // Quando cardinalidade é N (muitos), basta adicionar o novo valor
+          } else { // Do contrário substitui o valor antigo
+            mapaAtr.set(fact.atributo, [Object.values(fact)]);
+          }
+        } else {
+          var mapaAtr = new Map();
+          mapaAtr.set(fact.atributo, [Object.values(fact)]);
+          mapaEntidades.set(fact.entidade, mapaAtr);
+        }
+      }
+    );
+    // Remonta os fatos como uma matriz mas considerando apenas os vigentes
+    var fatosVigentes = [];
+    // Neste ponto colocar os dois laços poderia afetar o desempenho caso Facts for muito grande.
+    // Entretanto a escolha de usar os métodos de Map nos passos anteriores é mais vantajoso do que realizar buscas diretas em um Array
+    mapaEntidades.forEach(
+      (mapaAtr, chaveFatos, map) => {        
+        mapaAtr.forEach(
+          (fatos, chaveAtr, map) => fatosVigentes = fatosVigentes.concat(fatos) // concat para adicionar os valores apenas
+        )
+      }
+    );
+    return fatosVigentes;
+  }
+
+  return [];
 }
 
 getFatosVigentes(facts, schema);
