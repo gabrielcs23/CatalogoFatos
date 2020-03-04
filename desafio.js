@@ -110,16 +110,36 @@ function getFatosVigentes(facts, schema) {
     facts.forEach(
       (fact) => {
         if (mapaEntidades.has(fact.entidade)) {
-          mapaAtr = mapaEntidades.get(fact.entidade)
           var atrSchema = schema.find(
             (entry) => entry.atributo === fact.atributo
           );
-          if (mapaAtr.has(fact.atributo) && atrSchema.cardinalidade === 'many') {
-            mapaAtr.get(fact.atributo).push(Object.values(fact)); // Quando cardinalidade é N (muitos), basta adicionar o novo valor
-          } else { // Do contrário substitui o valor antigo
-            mapaAtr.set(fact.atributo, [Object.values(fact)]);
+          if (fact.added) {
+            var mapaAtr = mapaEntidades.get(fact.entidade);
+            if (mapaAtr.has(fact.atributo) && atrSchema.cardinalidade === 'many') {
+              mapaAtr.get(fact.atributo).push(Object.values(fact)); // Quando cardinalidade é N (muitos), basta adicionar o novo valor
+            } else { // Do contrário substitui o valor antigo
+              mapaAtr.set(fact.atributo, [Object.values(fact)]);
+            }
+          } else {
+            if (atrSchema.cardinalidade === 'one') { // Cardinalidade 1 apenas remove o valor
+              mapaEntidades.delete(fact.entidade);
+            } else { // Cardinalidade N procura o valor antes de remover
+              const fatos = mapaEntidades.get(fact.entidade).get(fact.atributo);
+              const idx = fatos.findIndex(
+                (fato) => fato[2] === fact.valor
+              );
+              if (idx === -1) {
+                console.error('Valor a ser removido não encontrado no catálogo');
+                return;
+              }
+              fatos.splice(idx, 1);
+            }
           }
         } else {
+          if (!fact.added) {
+            console.error('Valor a ser removido não encontrado no catálogo');
+            return;
+          }
           var mapaAtr = new Map();
           mapaAtr.set(fact.atributo, [Object.values(fact)]);
           mapaEntidades.set(fact.entidade, mapaAtr);
